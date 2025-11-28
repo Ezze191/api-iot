@@ -54,17 +54,20 @@ export async function registrarVehiculo(req, res) {
   res.json(vehiculo);
 }
 
-// GET usuario/datos-vehiculo/:uid
+// GET usuario/datos-vehiculo/:uid /69291174eb210b13b0d4d6a2
 export async function datosVehiculo(req, res) {
   const { uid } = req.params;
 
-  const vehiculo = await Vehiculo.findById(uid);
+  const vehiculo = await Vehiculo.findOne({_id: uid});
+
+  console.log("Vehículo encontrado:", vehiculo);
+
   if (!vehiculo) return res.status(404).json({ msg: "Vehículo no existe" });
 
   const sensores = await Sensor.find({ vehiculo_id: uid });
-
   res.json({ vehiculo, sensores });
 }
+
 
 // POST usuario/alternar-estado-vehiculo/:uid
 export async function alternarEstadoVehiculo(req, res) {
