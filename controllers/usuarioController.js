@@ -68,6 +68,25 @@ export async function datosVehiculo(req, res) {
   res.json({ vehiculo, sensores });
 }
 
+// GET usuario/vehiculos/:usuario_id
+export async function vehiculosPorUsuario(req, res) {
+  try {
+    const { usuario_id } = req.params;
+
+    // Buscar todos los vehículos que tengan ese usuario_id
+    const vehiculos = await Vehiculo.find(
+      { usuario_id },
+      "_id marca modelo estado"   // <-- Selección de campos
+    );
+
+    res.json(vehiculos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Error en el servidor" });
+  }
+}
+
+
 
 // POST usuario/alternar-estado-vehiculo/:uid
 export async function alternarEstadoVehiculo(req, res) {

@@ -4,7 +4,8 @@ import {
   ingresar,
   registrarVehiculo,
   datosVehiculo,
-  alternarEstadoVehiculo
+  alternarEstadoVehiculo,
+  vehiculosPorUsuario
 } from "../controllers/usuarioController.js";
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.post("/ingresar", ingresar);
 // Vehículos
 router.post("/registrar-vehiculo", registrarVehiculo);
 router.get("/datos-vehiculo/:uid", datosVehiculo);
+router.get("/vehiculos/:usuario_id", vehiculosPorUsuario);
 router.get("/alternar-estado-vehiculo/:uid", alternarEstadoVehiculo);
 
 export default router;
