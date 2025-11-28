@@ -58,26 +58,44 @@ export async function registrarVehiculo(req, res) {
 export async function datosVehiculo(req, res) {
   const { uid } = req.params;
 
-  const vehiculo = await Vehiculo.findOne({_id: uid});
-
-  console.log("Vehículo encontrado:", vehiculo);
-
+  const vehiculo = await Vehiculo.findOne({ _id: uid });
   if (!vehiculo) return res.status(404).json({ msg: "Vehículo no existe" });
 
-  const sensores = await Sensor.find({ vehiculo_id: uid });
-  res.json({ vehiculo, sensores });
+  const sensores = await Sensor.aggregate([
+    { $match: { vehiculo_id: uid }}, // filtro por vehículo
+    { $sort: { fecha_fin: -1 }}, // mas reciente
+    {
+      $group: {
+        _id: "$nombre",
+        ultimo: { $first: "$$ROOT" }//documento mas reciente
+      }
+    }
+  ]);
+
+  res.json({
+    vehiculo,
+    sensores: sensores.map(s => s.ultimo)
+  });
 }
+
+
 
 // GET usuario/vehiculos/:usuario_id
 export async function vehiculosPorUsuario(req, res) {
   try {
     const { usuario_id } = req.params;
 
-    // Buscar todos los vehículos que tengan ese usuario_id
     const vehiculos = await Vehiculo.find(
       { usuario_id },
-      "_id marca modelo estado"   // <-- Selección de campos
+      "_id marca modelo estado"
     );
+
+    if (vehiculos.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No se encontraron vehículos"
+      });
+    }
 
     res.json(vehiculos);
   } catch (error) {
@@ -87,19 +105,15 @@ export async function vehiculosPorUsuario(req, res) {
 }
 
 
-
 // POST usuario/alternar-estado-vehiculo/:uid
 export async function alternarEstadoVehiculo(req, res) {
   const { uid } = req.body;
-
-  // Buscar el vehículo
   const vehiculo = await Vehiculo.findById(uid);
 
   if (!vehiculo) {
     return res.status(404).json({ msg: "Vehículo no encontrado" });
   }
 
-  // Alternar estado
   const nuevoEstado = vehiculo.estado === "iniciado"
     ? "finalizado"
     : "iniciado";
