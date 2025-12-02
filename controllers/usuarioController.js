@@ -1,5 +1,6 @@
 import Usuario from "../models/Usuario.js";
 import Vehiculo from "../models/Vehiculo.js";
+import Tarjeta from "../models/Tarjeta.js";
 import Sensor from "../models/Sensor.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -40,18 +41,54 @@ export async function ingresar(req, res) {
 
 // POST usuario/registrar-vehiculo
 export async function registrarVehiculo(req, res) {
-  const { uid, usuario_id, marca, modelo, año, estado } = req.body;
+  try {
+    const { _id, usuario_id, marca, modelo, año, estado } = req.body;
 
-  const vehiculo = await Vehiculo.create({
-    _id: uid,
-    usuario_id,
-    marca,
-    modelo,
-    año,
-    estado
-  });
+    // 1. Buscar tarjeta donde el campo "numeros" sea igual al _id enviado
+    const tarjeta = await Tarjeta.findOne({ numeros: String(_id) });
 
-  res.json(vehiculo);
+    if (!tarjeta) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No existe una tarjeta con ese número"
+      });
+    }
+
+    // 2. Verificar que la tarjeta esté libre
+    if (tarjeta.status !== "libre") {
+      return res.status(400).json({
+        ok: false,
+        msg: "La tarjeta ya está en uso"
+      });
+    }
+
+    // 3. Reemplazar el _id del vehículo por el UID real de la tarjeta
+    const nuevoIdVehiculo = tarjeta.uid; // <-- este será el _id verdadero
+
+    // 4. Crear el vehículo usando el UID de la tarjeta
+    const vehiculo = await Vehiculo.create({
+      _id: nuevoIdVehiculo,
+      usuario_id,
+      marca,
+      modelo,
+      año,
+      estado
+    });
+
+    // 5. Actualizar tarjeta a "usado"
+    tarjeta.status = "usado";
+    await tarjeta.save();
+
+    res.json({
+      ok: true,
+      msg: "Vehículo registrado correctamente",
+      vehiculo
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Error en el servidor" });
+  }
 }
 
 // GET usuario/datos-vehiculo/:uid /69291174eb210b13b0d4d6a2
