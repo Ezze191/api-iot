@@ -91,20 +91,20 @@ export async function registrarVehiculo(req, res) {
   }
 }
 
-// GET usuario/datos-vehiculo/:uid /69291174eb210b13b0d4d6a2
-export async function datosVehiculo(req, res) {
+
+export async function HistorialDedatosVehiculo(req, res) {
   const { uid } = req.params;
 
   const vehiculo = await Vehiculo.findOne({ _id: uid });
   if (!vehiculo) return res.status(404).json({ msg: "Vehículo no existe" });
 
   const sensores = await Sensor.aggregate([
-    { $match: { vehiculo_id: uid }}, // filtro por vehículo
-    { $sort: { fecha_fin: -1 }}, // mas reciente
+    { $match: { uid_tarjeta: uid } }, // aquí el fix
+    { $sort: { fecha_fin: -1 } },
     {
       $group: {
-        _id: "$nombre",
-        ultimo: { $first: "$$ROOT" }//documento mas reciente
+        _id: "$sensor",          // agrupar por tipo de sensor
+        ultimo: { $first: "$$ROOT" }
       }
     }
   ]);
@@ -114,6 +114,44 @@ export async function datosVehiculo(req, res) {
     sensores: sensores.map(s => s.ultimo)
   });
 }
+
+export async function datosVehiculo(req, res) {
+  const { uid } = req.params;
+
+  const vehiculo = await Vehiculo.findOne({ _id: uid });
+  if (!vehiculo) return res.status(404).json({ msg: "Vehículo no existe" });
+
+  const sensores = await Sensor.aggregate([
+    { $match: { uid_tarjeta: uid } },          // filtra sensores del vehículo
+    {
+      $addFields: {
+        ultimoDato: { $last: "$datos" }       // toma el último dato del array
+      }
+    },
+    { $sort: { fecha_fin: -1 } },              // ordena por fecha más reciente
+    {
+      $group: {
+        _id: "$sensor",                       // agrupa por tipo de sensor
+        ultimo: { $first: "$$ROOT" }          // toma el último documento
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        sensor: "$ultimo.sensor",
+        fecha_fin: "$ultimo.fecha_fin",
+        valor: "$ultimo.ultimoDato.valor",
+        fecha_valor: "$ultimo.ultimoDato.dt"
+      }
+    }
+  ]);
+
+  res.json({
+    vehiculo,
+    sensores
+  });
+}
+
 
 
 
